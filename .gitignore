@@ -216,3 +216,27 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Electronics Shop project-specific ---
+
+# Environment files (never commit real secrets)
+.env
+.env.*
+!.env.example
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.vite/
+*.tsbuildinfo
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Uploaded media (local dev storage, not part of the repo)
+backend/uploads/
+backend/data/
+

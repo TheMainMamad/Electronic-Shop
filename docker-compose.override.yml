@@ -1,0 +1,29 @@
+# Auto-loaded by `docker compose up` for local development only.
+# Not copied to the production server — see docs/deployment.md.
+services:
+  backend:
+    build:
+      target: builder
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+      - uploads:/data/uploads
+    environment:
+      DEBUG: "true"
+
+  celery-worker:
+    build:
+      target: builder
+    volumes:
+      - ./backend/app:/app/app
+
+  celery-beat:
+    build:
+      target: builder
+    volumes:
+      - ./backend/app:/app/app
+
+  nginx:
+    ports:
+      - "${PUBLIC_HTTP_PORT:-80}:80"

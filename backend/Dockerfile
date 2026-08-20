@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libpq5 curl \
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --chown=appuser:appuser . .
+RUN chown appuser:appuser /app
 USER appuser
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

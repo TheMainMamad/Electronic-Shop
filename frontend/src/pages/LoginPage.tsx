@@ -8,6 +8,29 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48">
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.4 0 6.4 1.2 8.8 3.4l6.5-6.5C35.3 2.6 30 0.5 24 0.5 14.9 0.5 7.1 5.7 3.3 13.3l7.6 5.9C12.7 13.4 17.9 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.8-9.8 6.8-17.4z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.9 28.2a14.5 14.5 0 0 1 0-8.4l-7.6-5.9a24 24 0 0 0 0 20.2l7.6-5.9z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 47.5c6 0 11.3-2 15.1-5.4l-7.3-5.7c-2 1.4-4.7 2.2-7.8 2.2-6.1 0-11.3-3.9-13.2-9.4l-7.6 5.9C7.1 42.3 14.9 47.5 24 47.5z"
+      />
+    </svg>
+  );
+}
+
 export function LoginPage() {
   const login = useLogin();
   const navigate = useNavigate();
@@ -66,6 +89,7 @@ export function LoginPage() {
           href={googleLoginUrl()}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
         >
+          <GoogleIcon />
           ورود با گوگل
         </a>
 

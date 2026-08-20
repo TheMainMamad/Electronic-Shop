@@ -7,6 +7,8 @@ from app.modules.cart.router import router as cart_router
 from app.modules.catalog.router import router as catalog_router
 from app.modules.orders.router import router as orders_router
 from app.modules.payments.router import router as payments_router
+from app.modules.reports.router import reports_router
+from app.modules.reports.router import router as dashboard_router
 from app.modules.tickets.router import router as tickets_router
 from app.modules.users.router import router as users_router
 from app.modules.wallet.router import router as wallet_router
@@ -22,3 +24,5 @@ api_router.include_router(wallet_router)
 api_router.include_router(tickets_router)
 api_router.include_router(users_router)
 api_router.include_router(audit_router)
+api_router.include_router(dashboard_router)
+api_router.include_router(reports_router)

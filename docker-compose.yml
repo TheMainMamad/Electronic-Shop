@@ -18,6 +18,7 @@ x-backend-env: &backend-env
   ZARINPAL_CALLBACK_URL: ${ZARINPAL_CALLBACK_URL:-}
   STORAGE_ROOT: /data/uploads
   OPENAPI_ENABLED: ${OPENAPI_ENABLED:-true}
+  COOKIE_SECURE: ${COOKIE_SECURE:-}
 
 services:
   postgres:

@@ -40,7 +40,9 @@ class Settings(BaseSettings):
     # deployment that's deliberately running production behavior without TLS
     # yet (e.g. a bare-IP staging box before a domain/cert exists) — never
     # use this to relax a real, publicly reachable production deployment.
-    cookie_secure_override: bool | None = Field(default=None, alias="COOKIE_SECURE")
+    # Left as a raw string (rather than bool | None) so an unset/empty env
+    # var forwarded through docker-compose doesn't fail bool coercion.
+    cookie_secure_raw: str = Field(default="", alias="COOKIE_SECURE")
 
     @property
     def cors_allow_origins(self) -> list[str]:
@@ -49,8 +51,8 @@ class Settings(BaseSettings):
 
     @property
     def cookie_secure(self) -> bool:
-        if self.cookie_secure_override is not None:
-            return self.cookie_secure_override
+        if self.cookie_secure_raw.strip():
+            return self.cookie_secure_raw.strip().lower() in ("1", "true", "yes")
         return self.environment == "production"
 
 

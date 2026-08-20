@@ -19,6 +19,7 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
+from urllib.parse import quote
 
 import structlog
 from sqlalchemy import func, select
@@ -99,6 +100,128 @@ CATEGORY_TREE: list[dict[str, Any]] = [
         ],
     },
 ]
+
+# Product photography isn't ours to use, so each category gets a small,
+# self-drawn placeholder illustration (gradient card + line icon + Persian
+# label) instead — a self-contained data: URI, no external image hosting.
+def _g(stroke_width: int, *shapes: str) -> str:
+    return f'<g fill="none" stroke="#fff" stroke-width="{stroke_width}">' + "".join(shapes) + "</g>"
+
+
+_ICON_PATHS: dict[str, str] = {
+    "phone": _g(
+        9,
+        '<rect x="155" y="85" width="90" height="180" rx="14"/>',
+        '<circle cx="200" cy="248" r="5" fill="#fff"/>',
+    ),
+    "tablet": _g(
+        9,
+        '<rect x="125" y="90" width="150" height="170" rx="12"/>',
+        '<circle cx="200" cy="242" r="5" fill="#fff"/>',
+    ),
+    "bolt": '<path d="M212 80 150 195 192 195 178 270 250 150 205 150Z" fill="#fff"/>',
+    "laptop": _g(
+        9,
+        '<rect x="135" y="100" width="130" height="82" rx="8"/>',
+        '<path d="M115 200H285L298 226H102Z" stroke-linejoin="round"/>',
+    ),
+    "chip": _g(
+        7,
+        '<rect x="150" y="110" width="100" height="100" rx="8" stroke-width="9"/>',
+        '<circle cx="200" cy="160" r="18" fill="#fff"/>',
+        '<path d="M170 110V90M200 110V90M230 110V90M170 210V230M200 210V230M230 210V230'
+        'M150 140H130M150 180H130M250 140H270M250 180H270"/>',
+    ),
+    "mouse": _g(
+        9,
+        '<rect x="165" y="90" width="70" height="120" rx="35"/>',
+        '<path d="M200 90V140" stroke-width="7"/>',
+    ),
+    "headphone": _g(
+        10,
+        '<path d="M140 190A60 60 0 0 1 260 190" stroke-linecap="round"/>',
+        '<rect x="120" y="180" width="35" height="60" rx="14" fill="#fff" stroke="none"/>',
+        '<rect x="245" y="180" width="35" height="60" rx="14" fill="#fff" stroke="none"/>',
+    ),
+    "headset": _g(
+        10,
+        '<path d="M140 190A60 60 0 0 1 260 190" stroke-linecap="round"/>',
+        '<rect x="120" y="180" width="35" height="60" rx="14" fill="#fff" stroke="none"/>',
+        '<rect x="245" y="180" width="35" height="60" rx="14" fill="#fff" stroke="none"/>',
+        '<path d="M138 225Q118 242 134 258" stroke-width="7" stroke-linecap="round"/>',
+        '<circle cx="134" cy="258" r="5" fill="#fff"/>',
+    ),
+    "speaker": _g(
+        9,
+        '<rect x="155" y="80" width="90" height="180" rx="16"/>',
+        '<circle cx="200" cy="130" r="18" stroke-width="7"/>',
+        '<circle cx="200" cy="205" r="30" stroke-width="7"/>',
+    ),
+    "tv": _g(
+        9,
+        '<rect x="115" y="95" width="170" height="110" rx="10"/>',
+        '<path d="M200 205V230M160 230H240" stroke-linecap="round"/>',
+    ),
+    "appliance": _g(
+        9,
+        '<rect x="140" y="85" width="120" height="180" rx="16"/>',
+        '<path d="M140 150H260" stroke-width="7"/>',
+        '<circle cx="200" cy="120" r="6" fill="#fff"/>',
+    ),
+    "fridge": _g(
+        9,
+        '<rect x="140" y="70" width="120" height="200" rx="14"/>',
+        '<path d="M140 150H260" stroke-width="7"/>',
+        '<path d="M220 95V130M220 170V220" stroke-width="7" stroke-linecap="round"/>',
+    ),
+    "console": _g(
+        9,
+        '<rect x="120" y="130" width="160" height="80" rx="30"/>',
+        '<circle cx="245" cy="160" r="7" fill="#fff"/>',
+        '<circle cx="225" cy="180" r="7" fill="#fff"/>',
+        '<path d="M150 160V180M140 170H160" stroke-width="7" stroke-linecap="round"/>',
+    ),
+}
+
+# category slug -> (icon kind, gradient-from, gradient-to)
+CATEGORY_VISUALS: dict[str, tuple[str, str, str]] = {
+    "mobile-phones": ("phone", "#6366f1", "#4338ca"),
+    "tablets": ("tablet", "#8b5cf6", "#6d28d9"),
+    "mobile-accessories": ("bolt", "#14b8a6", "#0f766e"),
+    "laptops": ("laptop", "#64748b", "#334155"),
+    "computer-parts": ("chip", "#f59e0b", "#b45309"),
+    "computer-accessories": ("mouse", "#6b7280", "#374151"),
+    "headphones": ("headphone", "#ec4899", "#be185d"),
+    "speakers": ("speaker", "#f97316", "#c2410c"),
+    "televisions": ("tv", "#06b6d4", "#0e7490"),
+    "small-appliances": ("appliance", "#84cc16", "#4d7c0f"),
+    "refrigerators": ("fridge", "#0ea5e9", "#0369a1"),
+    "game-consoles": ("console", "#a855f7", "#7e22ce"),
+    "gaming-accessories": ("headset", "#ef4444", "#b91c1c"),
+}
+
+_CATEGORY_LABELS: dict[str, str] = {
+    child["slug"]: child["name"] for parent in CATEGORY_TREE for child in parent["children"]
+}
+
+
+def category_placeholder_image(category_slug: str) -> str:
+    kind, color_from, color_to = CATEGORY_VISUALS[category_slug]
+    label = _CATEGORY_LABELS[category_slug]
+    gradient_id = f"g-{category_slug}"
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">'
+        f'<defs><linearGradient id="{gradient_id}" x1="0" y1="0" x2="1" y2="1">'
+        f'<stop offset="0" stop-color="{color_from}"/><stop offset="1" stop-color="{color_to}"/>'
+        "</linearGradient></defs>"
+        f'<rect width="400" height="400" rx="28" fill="url(#{gradient_id})"/>'
+        f"{_ICON_PATHS[kind]}"
+        f'<text x="200" y="345" text-anchor="middle" font-family="sans-serif" font-size="26" '
+        f'fill="#ffffff" fill-opacity="0.92">{label}</text>'
+        "</svg>"
+    )
+    return "data:image/svg+xml," + quote(svg)
+
 
 PRODUCTS: list[dict[str, Any]] = [
     {
@@ -610,8 +733,11 @@ async def seed_products(session: AsyncSession, category_ids: dict[str, uuid.UUID
     product_repo = ProductRepository(session)
 
     for item in PRODUCTS:
+        image = category_placeholder_image(item["category_slug"])
         existing = await product_repo.get_by_slug_or_sku(item["slug"], item["sku"])
         if existing is not None:
+            if not existing.images:
+                existing.images = [image]
             continue
 
         await product_service.create(
@@ -627,6 +753,7 @@ async def seed_products(session: AsyncSession, category_ids: dict[str, uuid.UUID
                 else None,
                 brand=item["brand"],
                 category_id=category_ids[item["category_slug"]],
+                images=[image],
                 specifications=item["specifications"],
                 is_featured=item.get("is_featured", False),
                 is_popular=item.get("is_popular", False),

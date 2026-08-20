@@ -1,6 +1,6 @@
 [project]
 name = "electronics-shop-backend"
-version = "1.0.1"
+version = "1.0.2"
 description = "Persian electronics store backend (FastAPI, modular monolith)"
 requires-python = ">=3.13"
 dependencies = [

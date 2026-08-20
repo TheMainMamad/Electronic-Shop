@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.common.money import Money
+
 _SLUG_PATTERN = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
 
 
@@ -81,8 +83,8 @@ class ProductPublic(BaseModel):
     slug: str
     short_description: str
     description: str
-    price: Decimal
-    discount_price: Decimal | None
+    price: Money
+    discount_price: Money | None
     brand: str
     category_id: uuid.UUID
     images: list[str]

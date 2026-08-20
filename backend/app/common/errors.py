@@ -47,6 +47,15 @@ class UnauthorizedError(AppError):
     status_code = status.HTTP_401_UNAUTHORIZED
 
 
+class IdempotentReplay(Exception):  # noqa: N818
+    """Raised to short-circuit a route and replay a previously completed
+    response verbatim, without re-running any business logic."""
+
+    def __init__(self, status_code: int, body: Any) -> None:
+        self.status_code = status_code
+        self.body = body
+
+
 def _envelope(code: str, message: str, details: Any, request: Request) -> dict[str, Any]:
     request_id = request.headers.get("X-Request-Id") or getattr(
         request.state, "request_id", None
@@ -82,6 +91,10 @@ def register_exception_handlers(app: FastAPI) -> None:
                 request,
             ),
         )
+
+    @app.exception_handler(IdempotentReplay)
+    async def handle_idempotent_replay(request: Request, exc: IdempotentReplay) -> JSONResponse:
+        return JSONResponse(status_code=exc.status_code, content=exc.body)
 
     @app.exception_handler(StarletteHTTPException)
     async def handle_http_exception(

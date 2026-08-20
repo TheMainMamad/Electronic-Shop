@@ -2,6 +2,7 @@ from typing import Any
 
 import structlog
 from fastapi import FastAPI, Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -73,9 +74,12 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content=_envelope(
-                "VALIDATION_ERROR", "اطلاعات ارسال‌شده معتبر نیست.", exc.errors(), request
+                "VALIDATION_ERROR",
+                "اطلاعات ارسال‌شده معتبر نیست.",
+                jsonable_encoder(exc.errors()),
+                request,
             ),
         )
 

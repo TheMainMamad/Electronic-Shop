@@ -6,16 +6,8 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import get_settings
+from app.db import model_registry  # noqa: F401,E402 - registers all models on Base.metadata
 from app.db.base import Base
-
-# Import all modules' models here so Alembic autogenerate can see them.
-from app.common import idempotency_models  # noqa: F401,E402
-from app.modules.cart import models as cart_models  # noqa: F401,E402
-from app.modules.catalog import models as catalog_models  # noqa: F401,E402
-from app.modules.orders import models as orders_models  # noqa: F401,E402
-from app.modules.payments import models as payments_models  # noqa: F401,E402
-from app.modules.users import models as users_models  # noqa: F401,E402
-from app.modules.wallet import models as wallet_models  # noqa: F401,E402
 
 config = context.config
 if config.config_file_name is not None:

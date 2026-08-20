@@ -36,10 +36,22 @@ class Settings(BaseSettings):
 
     openapi_enabled: bool = True
 
+    # Cookies are Secure-by-default in production. Override only for a
+    # deployment that's deliberately running production behavior without TLS
+    # yet (e.g. a bare-IP staging box before a domain/cert exists) — never
+    # use this to relax a real, publicly reachable production deployment.
+    cookie_secure_override: bool | None = Field(default=None, alias="COOKIE_SECURE")
+
     @property
     def cors_allow_origins(self) -> list[str]:
         origins = self.cors_allow_origins_raw.split(",")
         return [origin.strip() for origin in origins if origin.strip()]
+
+    @property
+    def cookie_secure(self) -> bool:
+        if self.cookie_secure_override is not None:
+            return self.cookie_secure_override
+        return self.environment == "production"
 
 
 @lru_cache

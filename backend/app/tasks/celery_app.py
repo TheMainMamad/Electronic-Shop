@@ -1,6 +1,7 @@
 from celery import Celery
 
 from app.core.config import get_settings
+from app.db import model_registry  # noqa: F401 - registers all models before any task runs
 
 settings = get_settings()
 

@@ -12,6 +12,7 @@ from app.common.redis_client import get_redis
 from app.core.config import get_settings
 from app.db.session import get_db_session
 from app.integrations import google_oauth
+from app.integrations.google_oauth import GoogleOAuthNotConfigured
 from app.modules.auth.dependencies import CurrentUser
 from app.modules.auth.repository import UserRepository
 from app.modules.auth.schemas import (
@@ -151,13 +152,19 @@ async def google_login() -> RedirectResponse:
     nonce = secrets.token_urlsafe(24)
     verifier, challenge = google_oauth.generate_pkce_pair()
 
+    try:
+        url = google_oauth.build_authorization_url(
+            state=state, nonce=nonce, code_challenge=challenge
+        )
+    except GoogleOAuthNotConfigured as exc:
+        raise ConflictError(str(exc)) from exc
+
     redis = get_redis()
     await redis.set(
         f"oauth:google:{state}",
         json.dumps({"nonce": nonce, "verifier": verifier, "action": "login"}),
         ex=OAUTH_STATE_TTL_SECONDS,
     )
-    url = google_oauth.build_authorization_url(state=state, nonce=nonce, code_challenge=challenge)
     return RedirectResponse(url)
 
 
@@ -166,6 +173,13 @@ async def google_link_start(user: CurrentUser) -> RedirectResponse:
     state = secrets.token_urlsafe(24)
     nonce = secrets.token_urlsafe(24)
     verifier, challenge = google_oauth.generate_pkce_pair()
+
+    try:
+        url = google_oauth.build_authorization_url(
+            state=state, nonce=nonce, code_challenge=challenge
+        )
+    except GoogleOAuthNotConfigured as exc:
+        raise ConflictError(str(exc)) from exc
 
     redis = get_redis()
     session_payload = {
@@ -177,7 +191,6 @@ async def google_link_start(user: CurrentUser) -> RedirectResponse:
     await redis.set(
         f"oauth:google:{state}", json.dumps(session_payload), ex=OAUTH_STATE_TTL_SECONDS
     )
-    url = google_oauth.build_authorization_url(state=state, nonce=nonce, code_challenge=challenge)
     return RedirectResponse(url)
 
 
@@ -196,9 +209,12 @@ async def google_callback(
     await redis.delete(f"oauth:google:{state}")
     oauth_session = json.loads(raw_session)
 
-    raw_id_token = await google_oauth.exchange_code(
-        code=code, code_verifier=oauth_session["verifier"]
-    )
+    try:
+        raw_id_token = await google_oauth.exchange_code(
+            code=code, code_verifier=oauth_session["verifier"]
+        )
+    except GoogleOAuthNotConfigured as exc:
+        raise ConflictError(str(exc)) from exc
     identity = await google_oauth.verify_id_token(
         raw_id_token, expected_nonce=oauth_session["nonce"]
     )

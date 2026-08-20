@@ -8,6 +8,9 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./backend/alembic:/app/alembic
+      - ./backend/alembic.ini:/app/alembic.ini
+      - ./backend/pyproject.toml:/app/pyproject.toml
+      - ./backend/tests:/app/tests
       - uploads:/data/uploads
     environment:
       DEBUG: "true"

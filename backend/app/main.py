@@ -8,7 +8,7 @@ from app.api.v1.router import api_router
 from app.common.errors import register_exception_handlers
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.core.middleware import request_context_middleware
+from app.core.middleware import csrf_protection_middleware, request_context_middleware
 
 settings = get_settings()
 configure_logging(settings.debug)
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "Idempotency-Key"],
     )
+    app.middleware("http")(csrf_protection_middleware)
     app.middleware("http")(request_context_middleware)
 
     register_exception_handlers(app)

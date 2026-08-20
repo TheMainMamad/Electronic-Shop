@@ -19,6 +19,8 @@ dependencies = [
     "structlog>=24.4",
     "python-multipart>=0.0.17",
     "email-validator>=2.2",
+    "google-auth>=2.36",
+    "requests>=2.32",
 ]
 
 [project.optional-dependencies]
@@ -36,14 +38,23 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+# B008: FastAPI's Depends()/Cookie()/etc-in-default-argument is the framework's
+# documented idiom, not the mutable-default-argument bug this rule targets.
+ignore = ["B008"]
 
 [tool.mypy]
 python_version = "3.13"
 strict = true
 plugins = ["pydantic.mypy"]
 
+[[tool.mypy.overrides]]
+module = ["celery.*", "argon2.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 
 [build-system]

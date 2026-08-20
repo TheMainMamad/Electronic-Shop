@@ -9,7 +9,7 @@ from app.core.config import get_settings
 from app.db.base import Base
 
 # Import all modules' models here so Alembic autogenerate can see them.
-# Populated as each domain module lands (Phase 3+).
+from app.modules.users import models as users_models  # noqa: F401,E402
 
 config = context.config
 if config.config_file_name is not None:

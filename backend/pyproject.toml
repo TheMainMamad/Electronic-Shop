@@ -1,0 +1,65 @@
+[project]
+name = "electronics-shop-backend"
+version = "1.0.0"
+description = "Persian electronics store backend (FastAPI, modular monolith)"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "redis>=5.2",
+    "celery[redis]>=5.4",
+    "argon2-cffi>=23.1",
+    "pyjwt>=2.10",
+    "httpx>=0.27",
+    "structlog>=24.4",
+    "python-multipart>=0.0.17",
+    "email-validator>=2.2",
+    "google-auth>=2.36",
+    "requests>=2.32",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "aiosqlite>=0.20",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+# B008: FastAPI's Depends()/Cookie()/etc-in-default-argument is the framework's
+# documented idiom, not the mutable-default-argument bug this rule targets.
+ignore = ["B008"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "argon2.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

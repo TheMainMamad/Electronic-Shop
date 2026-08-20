@@ -15,6 +15,7 @@ from app.modules.catalog import models as catalog_models  # noqa: F401,E402
 from app.modules.orders import models as orders_models  # noqa: F401,E402
 from app.modules.payments import models as payments_models  # noqa: F401,E402
 from app.modules.users import models as users_models  # noqa: F401,E402
+from app.modules.wallet import models as wallet_models  # noqa: F401,E402
 
 config = context.config
 if config.config_file_name is not None:

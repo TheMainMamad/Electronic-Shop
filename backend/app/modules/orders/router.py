@@ -7,7 +7,7 @@ from app.common.idempotency import IdempotencyGuard, idempotency_guard
 from app.common.pagination import Page, PageParams
 from app.db.session import get_db_session
 from app.modules.auth.dependencies import CurrentUser, require_permission
-from app.modules.orders.models import Order
+from app.modules.orders.models import Order, OrderStatus
 from app.modules.orders.repository import OrderRepository
 from app.modules.orders.schemas import (
     CheckoutRequest,
@@ -16,6 +16,7 @@ from app.modules.orders.schemas import (
     OrderStatusUpdateRequest,
 )
 from app.modules.orders.service import OrderService
+from app.modules.wallet.service import WalletService
 
 router = APIRouter(tags=["orders"])
 
@@ -115,6 +116,12 @@ async def update_order_status(
     order = await OrderService(session).admin_update_status(
         order_id, data.new_status, data.note, user.id
     )
+    if order.status == OrderStatus.refunded:
+        # Refunding an order returns its value to the customer's wallet —
+        # the wallet ledger is the mechanism, not a separate manual step.
+        await WalletService(session).refund_order(
+            order.user_id, order.total, order.id, actor_id=user.id
+        )
     result = _serialize_order(order)
     await session.commit()
     return result

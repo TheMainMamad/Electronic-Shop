@@ -12,7 +12,7 @@ from app.common.redis_client import get_redis
 from app.core.config import get_settings
 from app.db.session import get_db_session
 from app.integrations import google_oauth
-from app.integrations.google_oauth import GoogleOAuthNotConfigured
+from app.integrations.google_oauth import GoogleOAuthError, GoogleOAuthNotConfigured
 from app.modules.auth.dependencies import CurrentUser
 from app.modules.auth.repository import UserRepository
 from app.modules.auth.schemas import (
@@ -213,11 +213,11 @@ async def google_callback(
         raw_id_token = await google_oauth.exchange_code(
             code=code, code_verifier=oauth_session["verifier"]
         )
-    except GoogleOAuthNotConfigured as exc:
+        identity = await google_oauth.verify_id_token(
+            raw_id_token, expected_nonce=oauth_session["nonce"]
+        )
+    except (GoogleOAuthNotConfigured, GoogleOAuthError) as exc:
         raise ConflictError(str(exc)) from exc
-    identity = await google_oauth.verify_id_token(
-        raw_id_token, expected_nonce=oauth_session["nonce"]
-    )
 
     service = AuthService(session)
     redirect = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)

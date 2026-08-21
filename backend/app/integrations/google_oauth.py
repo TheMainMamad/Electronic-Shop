@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 from dataclasses import dataclass
 from urllib.parse import urlencode
@@ -118,4 +119,17 @@ def _verify_sync(raw_id_token: str, *, expected_nonce: str) -> GoogleIdentity:
 
 
 async def verify_id_token(raw_id_token: str, *, expected_nonce: str) -> GoogleIdentity:
-    return await run_in_threadpool(_verify_sync, raw_id_token, expected_nonce=expected_nonce)
+    # google-auth's cert fetch defaults to a 120s timeout internally, far past
+    # nginx's proxy_read_timeout — bound it so a slow/blocked path to Google
+    # (observed in production: Google intermittently stalls or blocks cert
+    # fetches from this server's network) fails fast with a clear error
+    # instead of the request hanging until the proxy kills it with a 504.
+    try:
+        return await asyncio.wait_for(
+            run_in_threadpool(_verify_sync, raw_id_token, expected_nonce=expected_nonce),
+            timeout=12,
+        )
+    except TimeoutError as exc:
+        raise GoogleOAuthError(
+            "امکان تأیید هویت با گوگل در حال حاضر وجود ندارد. لطفاً دوباره تلاش کنید."
+        ) from exc

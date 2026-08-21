@@ -1,12 +1,8 @@
-import asyncio
 import secrets
 from dataclasses import dataclass
 from urllib.parse import urlencode
 
 import httpx
-from google.auth.transport.requests import Request as GoogleAuthRequest
-from google.oauth2 import id_token as google_id_token
-from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
 
@@ -14,6 +10,14 @@ settings = get_settings()
 
 AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+# Verifying the ID token locally means fetching Google's public keys from
+# www.googleapis.com, which is unreliable from this server's network
+# (observed in production: stalls up to 120s, or a fast 403) — likely
+# geographic filtering on Google's side. oauth2.googleapis.com — the same
+# host the token exchange above already uses successfully — has a tokeninfo
+# endpoint that has Google verify the signature server-side and hand back
+# the validated claims, sidestepping the blocked path entirely.
+TOKENINFO_ENDPOINT = "https://oauth2.googleapis.com/tokeninfo"
 
 
 class GoogleOAuthNotConfigured(Exception):
@@ -97,11 +101,17 @@ async def exchange_code(*, code: str, code_verifier: str) -> str:
     return str(raw_id_token)
 
 
-def _verify_sync(raw_id_token: str, *, expected_nonce: str) -> GoogleIdentity:
-    claims = google_id_token.verify_oauth2_token(  # type: ignore[no-untyped-call]
-        raw_id_token, GoogleAuthRequest(), settings.google_oauth_client_id
-    )
+async def verify_id_token(raw_id_token: str, *, expected_nonce: str) -> GoogleIdentity:
+    async with httpx.AsyncClient(timeout=10) as client:
+        response = await client.get(TOKENINFO_ENDPOINT, params={"id_token": raw_id_token})
 
+    if response.status_code != 200:
+        raise GoogleOAuthError("تأیید هویت گوگل ناموفق بود.")
+
+    claims = response.json()
+
+    if claims.get("aud") != settings.google_oauth_client_id:
+        raise GoogleOAuthError("شناسه توکن گوگل با این برنامه مطابقت ندارد.")
     if claims.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
         raise GoogleOAuthError("صادرکننده توکن گوگل نامعتبر است.")
     if claims.get("nonce") != expected_nonce:
@@ -112,24 +122,7 @@ def _verify_sync(raw_id_token: str, *, expected_nonce: str) -> GoogleIdentity:
     return GoogleIdentity(
         subject=claims["sub"],
         email=claims["email"],
-        email_verified=bool(claims.get("email_verified", False)),
+        email_verified=claims.get("email_verified") == "true",
         name=claims.get("name", ""),
         picture=claims.get("picture"),
     )
-
-
-async def verify_id_token(raw_id_token: str, *, expected_nonce: str) -> GoogleIdentity:
-    # google-auth's cert fetch defaults to a 120s timeout internally, far past
-    # nginx's proxy_read_timeout — bound it so a slow/blocked path to Google
-    # (observed in production: Google intermittently stalls or blocks cert
-    # fetches from this server's network) fails fast with a clear error
-    # instead of the request hanging until the proxy kills it with a 504.
-    try:
-        return await asyncio.wait_for(
-            run_in_threadpool(_verify_sync, raw_id_token, expected_nonce=expected_nonce),
-            timeout=12,
-        )
-    except TimeoutError as exc:
-        raise GoogleOAuthError(
-            "امکان تأیید هویت با گوگل در حال حاضر وجود ندارد. لطفاً دوباره تلاش کنید."
-        ) from exc

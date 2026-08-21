@@ -1,6 +1,6 @@
 [project]
 name = "electronics-shop-backend"
-version = "1.0.9"
+version = "1.0.10"
 description = "Persian electronics store backend (FastAPI, modular monolith)"
 requires-python = ">=3.13"
 dependencies = [
@@ -19,8 +19,6 @@ dependencies = [
     "structlog>=24.4",
     "python-multipart>=0.0.17",
     "email-validator>=2.2",
-    "google-auth>=2.36",
-    "requests>=2.32",
 ]
 
 [project.optional-dependencies]
